@@ -8,10 +8,12 @@ version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
+    jcenter()
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation "org.jetbrains.exposed:exposed:0.14.1"
 }
 
 sourceCompatibility = JavaVersion.VERSION_11
