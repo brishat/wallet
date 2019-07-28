@@ -11,11 +11,14 @@ import io.ktor.client.request.get
 import io.ktor.client.request.host
 import io.ktor.client.request.port
 import io.ktor.client.request.post
+import io.ktor.content.TextContent
+import io.ktor.http.ContentType
+import java.math.BigDecimal
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class MoneyTransferSpec : DescribeSpec({
     describe("Simple money transfer") {
-        val account1 = createAccount()
+        val account1 = createAccount(100)
         val account2 = createAccount()
 
         context("Check account 1") {
@@ -40,7 +43,7 @@ class MoneyTransferSpec : DescribeSpec({
 
 private val mapper = jacksonObjectMapper()
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-private val client = HttpClient() {
+private val client = HttpClient {
     defaultRequest {
         host = "127.0.0.1"
         port = 8080
@@ -48,7 +51,13 @@ private val client = HttpClient() {
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
-private suspend fun createAccount(): Account {
-    val createResult = client.post<String>("account")
+private suspend fun createAccount(initialAmount: Long = 0): Account {
+    val createResult = client.post<String>("account") {
+        body = TextContent(
+            text = """{"initial_balance": $initialAmount}""",
+            contentType = ContentType.Application.Json
+        )
+    }
     return mapper.readValue(createResult, Account::class.java)
+        .copy(balance = BigDecimal.valueOf(initialAmount * 100, 2))
 }

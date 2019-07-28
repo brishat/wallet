@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.util.UUID
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
-class Account(
+data class Account(
     val id: UUID,
     val balance: BigDecimal
 )

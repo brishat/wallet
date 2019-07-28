@@ -2,6 +2,7 @@ package com.revolut.wallet.core.account
 
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
+import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.get
@@ -23,7 +24,8 @@ fun Route.account(accountService: AccountService) {
         }
 
         post("/") {
-            val account = accountService.createAccount()
+            val initialBalance = call.receive<CreateAccountDto>().initial_balance
+            val account = accountService.createAccount(initialBalance)
             if (account == null) call.respond(HttpStatusCode.InternalServerError)
             else call.respond(HttpStatusCode.Created, account)
         }

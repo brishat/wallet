@@ -9,10 +9,10 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class AccountService {
 
-    fun createAccount(): Account? = transaction {
+    fun createAccount(initialBalance: BigDecimal): Account? = transaction {
         val result = AccountTable.insert {
             it[id] = UUID.randomUUID()
-            it[balance] = BigDecimal.ZERO
+            it[balance] = initialBalance
             it[locked] = false
         }
         return@transaction result.resultedValues?.firstOrNull()?.toAccount()
