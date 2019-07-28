@@ -1,2 +1,2 @@
 rootProject.name = 'wallet'
-
+include("app", "component-test")

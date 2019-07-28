@@ -3,33 +3,36 @@ plugins {
     id 'org.jmailen.kotlinter' version '2.1.0'
 }
 
-group 'com.revolut'
-version '1.0-SNAPSHOT'
+allprojects {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+}
 
-repositories {
-    mavenCentral()
-    jcenter()
+subprojects {
+    group 'com.revolut'
+    version '1.0-SNAPSHOT'
+
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+
+    compileKotlin {
+        kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+        kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+    }
+    compileTestKotlin {
+        kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+        kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+    }
+
+    kotlinter {
+        disabledRules = ["import-ordering"]
+    }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "org.jetbrains.exposed:exposed:$exposed_version"
-    implementation "io.ktor:ktor-server-core:$ktor_version"
-    implementation "io.ktor:ktor-server-netty:$ktor_version"
-    implementation "io.ktor:ktor-jackson:$ktor_version"
-    implementation "org.kodein.di:kodein-di-generic-jvm:$kodein_version"
-    implementation "org.slf4j:slf4j-api:$slf4j_version"
-    implementation "org.slf4j:slf4j-simple:$slf4j_version"
-}
-
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
-
-compileKotlin {
-    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
-}
-compileTestKotlin {
-    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit5_version"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:$junit5_version"
 }
