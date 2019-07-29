@@ -50,6 +50,13 @@ class MoneyTransferSpec : DescribeSpec({
                 transactionId shouldNotBe null
             }
         }
+
+        context("Transfer 150 from account1 should fail") {
+            val transactionId = transfer(account1, account2, 150)
+            it("should fail transaction") {
+                transactionId shouldBe null
+            }
+        }
     }
 })
 
@@ -82,6 +89,6 @@ private suspend fun transfer(from: Account, to: Account, amount: Long): UUID? {
         )
     }
 
-    return if (response.status == HttpStatusCode.OK) UUID.fromString(response.readText())
+    return if (response.status == HttpStatusCode.OK) UUID.fromString(response.readText().trim('"'))
     else null
 }

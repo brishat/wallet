@@ -1,30 +1,51 @@
 package com.revolut.wallet.core.transaction
 
+import com.revolut.wallet.core.account.Account
+import com.revolut.wallet.core.account.AccountService
 import com.revolut.wallet.core.transfer.TransferDto
 import com.revolut.wallet.exception.WalletException
+import java.math.BigDecimal
 import java.util.UUID
-import kotlinx.coroutines.delay
 import mu.KLogging
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
 
-class TransactionService {
+class TransactionService(
+    private val accountService: AccountService
+) {
 
     fun createTransaction(transfer: TransferDto): Transaction = transaction {
-        val result = TransactionTable.insert {
+        TransactionTable.insert {
             it[id] = UUID.randomUUID()
             it[fromAccountId] = transfer.fromId
             it[toAccountId] = transfer.toId
             it[amount] = transfer.amount
             it[status] = TransactionStatus.IN_PROGRESS
-        }
-        return@transaction result.resultedValues?.firstOrNull()?.toTransaction()
+        }.resultedValues
+            ?.firstOrNull()?.toTransaction()
             ?: throw WalletException("Error on create transaction")
     }
 
-    suspend fun processTransaction(transaction: Transaction) {
-        delay(10000L)
-        logger.info { "Process transaction: $transaction" }
+    fun createCreditTransactionLog(transaction: Transaction, fromAccount: Account): Unit = transaction {
+        accountService.credit(fromAccount, transaction)
+
+        TransactionLogTable.insert {
+            it[transactionId] = transaction.id
+            it[accountId] = fromAccount.id
+            it[debit] = BigDecimal.ZERO
+            it[credit] = transaction.amount
+        }
+    }
+
+    fun createDebitTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
+        accountService.debit(toAccount, transaction)
+
+        TransactionLogTable.insert {
+            it[transactionId] = transaction.id
+            it[accountId] = toAccount.id
+            it[debit] = BigDecimal.ZERO
+            it[credit] = transaction.amount
+        }
     }
 
     companion object : KLogging()
