@@ -43,15 +43,13 @@ class AccountService {
         if (result == 0) throw WalletException("Can not lock account")
     }
 
-    fun unlockAccount(accountId: UUID) = transaction {
-        val result = AccountTable.update({
+    fun unlockAccount(accountId: UUID): Unit = transaction {
+        AccountTable.update({
             AccountTable.id eq accountId and
                 (AccountTable.locked eq true)
         }) {
             it[locked] = false
         }
-
-        if (result == 0) throw IllegalStateException()
     }
 
     fun credit(account: Account, transaction: Transaction) {

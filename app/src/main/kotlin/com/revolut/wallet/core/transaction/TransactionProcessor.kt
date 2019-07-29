@@ -23,10 +23,7 @@ class TransactionProcessor(
 
             transactionService.createCreditTransactionLog(transaction, fromAccount)
         } finally {
-            try {
-                accountService.unlockAccount(transaction.fromAccountId)
-            } catch (e: Exception) {
-            }
+            accountService.unlockAccount(transaction.fromAccountId)
         }
     }
 
@@ -37,10 +34,7 @@ class TransactionProcessor(
             val toAccount = accountService.getAccount(transaction.toAccountId)
             transactionService.createDebitTransactionLog(transaction, toAccount)
         } finally {
-            try {
-                accountService.unlockAccount(transaction.toAccountId)
-            } catch (e: Exception) {
-            }
+            accountService.unlockAccount(transaction.toAccountId)
         }
     }
 
