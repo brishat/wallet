@@ -3,7 +3,9 @@ package com.revolut.wallet.spec
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.revolut.wallet.core.Account
+import com.revolut.wallet.core.Transfer
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.DescribeSpec
 import io.ktor.client.HttpClient
 import io.ktor.client.features.defaultRequest
@@ -11,31 +13,41 @@ import io.ktor.client.request.get
 import io.ktor.client.request.host
 import io.ktor.client.request.port
 import io.ktor.client.request.post
+import io.ktor.client.response.HttpResponse
+import io.ktor.client.response.readText
 import io.ktor.content.TextContent
 import io.ktor.http.ContentType
-import java.math.BigDecimal
+import io.ktor.http.HttpStatusCode
+import java.util.UUID
 
 @Suppress("BlockingMethodInNonBlockingContext")
 class MoneyTransferSpec : DescribeSpec({
     describe("Simple money transfer") {
-        val account1 = createAccount(100)
+        val account1 = createAccount(100.0)
         val account2 = createAccount()
 
         context("Check account 1") {
             val result = client.get<String>("account/${account1.id}")
             val account = mapper.readValue(result, Account::class.java)
-            it("account 1 is correct") {
+            it("Account 1 created") {
                 account.id shouldBe account1.id
-                account.balance shouldBe account1.balance
+                account.balance shouldBe 100.0
             }
         }
 
         context("Check account 2") {
             val result = client.get<String>("account/${account2.id}")
             val account = mapper.readValue(result, Account::class.java)
-            it("account 2 is correct") {
+            it("Account 2 created") {
                 account.id shouldBe account2.id
-                account.balance shouldBe account2.balance
+                account.balance shouldBe 0.0
+            }
+        }
+
+        context("Transfer 50 from account1 to account2") {
+            val transactionId = transfer(account1, account2, 50)
+            it("should create transaction") {
+                transactionId shouldNotBe null
             }
         }
     }
@@ -51,13 +63,25 @@ private val client = HttpClient {
 }
 
 @Suppress("BlockingMethodInNonBlockingContext")
-private suspend fun createAccount(initialAmount: Long = 0): Account {
-    val createResult = client.post<String>("account") {
+private suspend fun createAccount(initialAmount: Double = 0.0): Account {
+    val result = client.post<HttpResponse>("account") {
         body = TextContent(
             text = """{"initial_balance": $initialAmount}""",
             contentType = ContentType.Application.Json
         )
     }
-    return mapper.readValue(createResult, Account::class.java)
-        .copy(balance = BigDecimal.valueOf(initialAmount * 100, 2))
+    return mapper.readValue(result.readText(), Account::class.java)
+}
+
+@Suppress("BlockingMethodInNonBlockingContext")
+private suspend fun transfer(from: Account, to: Account, amount: Long): UUID? {
+    val response = client.post<HttpResponse>("transfer") {
+        body = TextContent(
+            text = mapper.writeValueAsString(Transfer(from, to, amount)),
+            contentType = ContentType.Application.Json
+        )
+    }
+
+    return if (response.status == HttpStatusCode.OK) UUID.fromString(response.readText())
+    else null
 }

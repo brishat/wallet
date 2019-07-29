@@ -3,6 +3,8 @@ package com.revolut.wallet
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.revolut.wallet.core.account.AccountService
 import com.revolut.wallet.core.account.account
+import com.revolut.wallet.core.transfer.TransferService
+import com.revolut.wallet.core.transfer.transfer
 import com.revolut.wallet.db.InMemoryDatabase
 import io.ktor.application.Application
 import io.ktor.application.call
@@ -31,10 +33,12 @@ fun Application.module() {
 
     install(Routing) {
         val accountService by kodein.instance<AccountService>()
+        val transactionService by kodein.instance<TransferService>()
 
         routing {
             get("/") { call.respondText("Hello, world!", ContentType.Text.Html) }
             account(accountService)
+            transfer(transactionService)
         }
     }
 }

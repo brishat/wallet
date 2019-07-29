@@ -8,26 +8,32 @@ import io.ktor.routing.Route
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
+import java.lang.Exception
 import java.util.UUID
 
 fun Route.account(accountService: AccountService) {
     route("/account") {
-
         get("/all") {
             call.respond(accountService.getAccountList())
         }
 
         get("/{id}") {
-            val account = accountService.getAccount(UUID.fromString(call.parameters["id"]))
-            if (account == null) call.respond(HttpStatusCode.NotFound)
-            else call.respond(account)
+            try {
+                val account = accountService.getAccount(UUID.fromString(call.parameters["id"]))
+                call.respond(account)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.NotFound, e.localizedMessage)
+            }
         }
 
         post("/") {
-            val initialBalance = call.receive<CreateAccountDto>().initial_balance
-            val account = accountService.createAccount(initialBalance)
-            if (account == null) call.respond(HttpStatusCode.InternalServerError)
-            else call.respond(HttpStatusCode.Created, account)
+            try {
+                val initialBalance = call.receive<CreateAccountDto>().initial_balance
+                val account = accountService.createAccount(initialBalance)
+                call.respond(account)
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, e.localizedMessage)
+            }
         }
     }
 }

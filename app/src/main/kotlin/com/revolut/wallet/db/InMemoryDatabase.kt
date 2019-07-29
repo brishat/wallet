@@ -1,6 +1,7 @@
 package com.revolut.wallet.db
 
 import com.revolut.wallet.core.account.AccountTable
+import com.revolut.wallet.core.transaction.TransactionTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
@@ -15,7 +16,8 @@ object InMemoryDatabase {
         transaction {
             addLogger(StdOutSqlLogger)
             SchemaUtils.create(
-                AccountTable
+                AccountTable,
+                TransactionTable
             )
         }
     }

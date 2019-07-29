@@ -30,3 +30,6 @@ modules.xml
 /build/
 **/build/
 .gradle/
+
+# Project spec:
+.kotlintest/

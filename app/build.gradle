@@ -16,4 +16,5 @@ dependencies {
     implementation "org.kodein.di:kodein-di-generic-jvm:$kodein_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
     implementation "org.slf4j:slf4j-simple:$slf4j_version"
+    implementation("io.github.microutils:kotlin-logging:$kotlin_logging_version")
 }

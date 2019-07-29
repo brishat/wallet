@@ -1,28 +1,68 @@
 package com.revolut.wallet.core.account
 
+import com.revolut.wallet.exception.WalletException
 import java.math.BigDecimal
 import java.util.UUID
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 
 class AccountService {
 
-    fun createAccount(initialBalance: BigDecimal): Account? = transaction {
+    fun createAccount(initialBalance: BigDecimal): Account = transaction {
         val result = AccountTable.insert {
             it[id] = UUID.randomUUID()
             it[balance] = initialBalance
             it[locked] = false
         }
         return@transaction result.resultedValues?.firstOrNull()?.toAccount()
+            ?: throw WalletException("Error on create account")
     }
 
-    fun getAccount(id: UUID): Account? = transaction {
+    fun getAccount(id: UUID): Account = transaction {
         return@transaction AccountTable.select { AccountTable.id eq id }.firstOrNull()?.toAccount()
+            ?: throw WalletException("Account not found")
     }
 
     fun getAccountList(): List<Account> = transaction {
         return@transaction AccountTable.selectAll().map { it.toAccount() }
+    }
+
+    fun lockAccount(accountId: UUID): Account = transaction {
+        val result = AccountTable.update({
+            AccountTable.id eq accountId and
+                (AccountTable.locked eq false)
+        }) {
+            it[locked] = true
+        }
+
+        if (result == 0) throw WalletException("Can not lock account")
+
+        return@transaction getAccount(accountId)
+    }
+
+    fun unlockAccount(accountId: UUID) = transaction {
+        val result = AccountTable.update({
+            AccountTable.id eq accountId and
+                (AccountTable.locked eq true)
+        }) {
+            it[locked] = false
+        }
+
+        if (result == 0) throw IllegalStateException()
+    }
+
+    fun credit(account: Account, amount: BigDecimal) = transaction {
+        val result = AccountTable.update({
+            AccountTable.id eq account.id and
+                (AccountTable.locked eq true)
+        }) {
+            it[balance] = account.balance - amount
+        }
+
+        if (result == 0) throw IllegalStateException()
     }
 }
