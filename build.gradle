@@ -16,19 +16,6 @@ subprojects {
 
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-
-    compileKotlin {
-        kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
-        kotlinOptions.jvmTarget = JavaVersion.VERSION_11
-    }
-    compileTestKotlin {
-        kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
-        kotlinOptions.jvmTarget = JavaVersion.VERSION_11
-    }
-
-    kotlinter {
-        disabledRules = ["import-ordering"]
-    }
 }
 
 dependencies {

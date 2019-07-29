@@ -12,6 +12,19 @@ dependencies {
     testImplementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
 }
 
+compileKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+}
+compileTestKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+}
+
 test {
     useJUnitPlatform()
+}
+
+kotlinter {
+    disabledRules = ["import-ordering"]
 }

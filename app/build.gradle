@@ -16,5 +16,18 @@ dependencies {
     implementation "org.kodein.di:kodein-di-generic-jvm:$kodein_version"
     implementation "org.slf4j:slf4j-api:$slf4j_version"
     implementation "org.slf4j:slf4j-simple:$slf4j_version"
-    implementation("io.github.microutils:kotlin-logging:$kotlin_logging_version")
+    implementation "io.github.microutils:kotlin-logging:$kotlin_logging_version"
+}
+
+compileKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+}
+compileTestKotlin {
+    kotlinOptions.freeCompilerArgs = ["-Xjsr305=strict"]
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11
+}
+
+kotlinter {
+    disabledRules = ["import-ordering"]
 }
