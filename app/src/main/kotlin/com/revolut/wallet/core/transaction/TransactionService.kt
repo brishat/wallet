@@ -9,6 +9,7 @@ import java.util.UUID
 import mu.KLogging
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 
 class TransactionService(
     private val accountService: AccountService
@@ -45,6 +46,10 @@ class TransactionService(
             it[accountId] = toAccount.id
             it[debit] = BigDecimal.ZERO
             it[credit] = transaction.amount
+        }
+
+        TransactionTable.update({ TransactionTable.id eq transaction.id }) {
+            it[status] = TransactionStatus.FINISHED
         }
     }
 
