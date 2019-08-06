@@ -21,7 +21,7 @@ fun Route.transfer(transferService: TransferService) {
                 val transaction = transferService.transfer(transfer)
                 call.respond(transaction.id)
             } catch (e: WalletException) {
-                call.respond(HttpStatusCode.InternalServerError, e.getError())
+                call.respond(HttpStatusCode.Conflict, e.getError())
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, e.getError())
                 logger.error(e) { "Can not transfer money" }
