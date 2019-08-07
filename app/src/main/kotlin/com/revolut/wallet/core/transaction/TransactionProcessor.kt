@@ -66,7 +66,7 @@ class TransactionProcessor(
     }
 
     private fun Account.checkIsBalanceEnough(amount: BigDecimal) {
-        if (this.balance <= amount) throw WalletException("Account has not enough on balance")
+        if (this.balance < amount) throw WalletException("Account has not enough on balance")
     }
 
     private suspend fun lockAccount(accountId: UUID) {
