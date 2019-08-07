@@ -4,11 +4,14 @@ import com.revolut.wallet.core.account.Account
 import com.revolut.wallet.core.account.AccountService
 import com.revolut.wallet.exception.WalletException
 import io.mockk.Runs
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.just
+import io.mockk.runs
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
@@ -82,13 +85,13 @@ class TransactionProcessorTest {
     }
 
     @Test
-    fun `'debitToAccount' shouldn't put money to account, if can not lock`() {
+    fun `'debitToAccount' should rollback money, if can not lock`() {
         every { accountService.lockAccount(ACCOUNT_2.id) } throws WalletException("")
+        coEvery { transactionService.createRollbackTransactionLog(TRANSACTION, ACCOUNT_1) } just runs
 
-        assertThrows<WalletException> {
-            runBlocking { transactionProcessor.debitToAccount(TRANSACTION) }
-        }
+        runBlocking { transactionProcessor.debitToAccount(TRANSACTION) }
 
+        coVerify { transactionService.createRollbackTransactionLog(TRANSACTION, ACCOUNT_1) }
         verify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_2) }
         verify(inverse = true) { accountService.unlockAccount(ACCOUNT_2.id) }
     }

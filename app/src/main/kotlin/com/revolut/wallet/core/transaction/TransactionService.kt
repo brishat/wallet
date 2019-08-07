@@ -53,5 +53,13 @@ class TransactionService(
         }
     }
 
+    fun createRollbackTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
+        accountService.debit(toAccount, transaction)
+
+        TransactionTable.update({ TransactionTable.id eq transaction.id }) {
+            it[status] = TransactionStatus.RETURNED
+        }
+    }
+
     companion object : KLogging()
 }
