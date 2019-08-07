@@ -17,7 +17,7 @@ class TransactionProcessor(
 
     suspend fun creditFromAccount(transaction: Transaction) {
         logger.info { "Create credit transaction log: $transaction" }
-        lockAccount(transaction.fromAccountId)
+        lockAccount(transaction.fromAccountId, transaction.id)
 
         try {
             val fromAccount = accountService.getAccount(transaction.fromAccountId)
@@ -25,14 +25,14 @@ class TransactionProcessor(
 
             transactionService.createCreditTransactionLog(transaction, fromAccount)
         } finally {
-            accountService.unlockAccount(transaction.fromAccountId)
+            accountService.unlockAccount(transaction.fromAccountId, transaction.id)
         }
     }
 
     suspend fun debitToAccount(transaction: Transaction) {
         logger.info { "Create debit transaction log: $transaction" }
         val locked = try {
-            lockAccount(transaction.toAccountId)
+            lockAccount(transaction.toAccountId, transaction.id)
             true
         } catch (e: Exception) {
             GlobalScope.launch { rollbackToAccount(transaction) }
@@ -43,7 +43,7 @@ class TransactionProcessor(
             val toAccount = accountService.getAccount(transaction.toAccountId)
             transactionService.createDebitTransactionLog(transaction, toAccount)
         } finally {
-            accountService.unlockAccount(transaction.toAccountId)
+            accountService.unlockAccount(transaction.toAccountId, transaction.id)
         }
     }
 
@@ -52,16 +52,16 @@ class TransactionProcessor(
         var locked = false
         while (!locked) {
             try {
-                lockAccount(transaction.fromAccountId)
+                lockAccount(transaction.fromAccountId, transaction.id)
                 locked = true
             } catch (e: Exception) {
             }
         }
         try {
-            val toAccount = accountService.getAccount(transaction.fromAccountId)
-            transactionService.createRollbackTransactionLog(transaction, toAccount)
+            val fromAccount = accountService.getAccount(transaction.fromAccountId)
+            transactionService.createRollbackTransactionLog(transaction, fromAccount)
         } finally {
-            accountService.unlockAccount(transaction.fromAccountId)
+            accountService.unlockAccount(transaction.fromAccountId, transaction.id)
         }
     }
 
@@ -69,12 +69,12 @@ class TransactionProcessor(
         if (this.balance < amount) throw WalletException("Account has not enough on balance")
     }
 
-    private suspend fun lockAccount(accountId: UUID) {
+    private suspend fun lockAccount(accountId: UUID, transactionId: UUID) {
         var attempt = 0
         var isLocked = false
         while (!isLocked && attempt < ATTEMPT_MAX) {
             try {
-                accountService.lockAccount(accountId)
+                accountService.lockAccount(accountId, transactionId)
                 isLocked = true
             } catch (e: WalletException) {
                 logger.info { "Retry lock account: $accountId" }

@@ -38,10 +38,10 @@ class TransferServiceTest {
 
     @BeforeEach
     fun beforeEach() {
-        every { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1
-        every { accountService.getAccount(ACCOUNT_2.id) } returns ACCOUNT_2
+        coEvery { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1
+        coEvery { accountService.getAccount(ACCOUNT_2.id) } returns ACCOUNT_2
 
-        every { transactionService.createTransaction(any()) } returns TRANSACTION
+        coEvery { transactionService.createTransaction(any()) } returns TRANSACTION
 
         coEvery { transactionProcessor.creditFromAccount(TRANSACTION) } just Runs
         coEvery { transactionProcessor.debitToAccount(TRANSACTION) } just Runs
@@ -59,7 +59,7 @@ class TransferServiceTest {
 
     @Test
     fun `'transfer' should't create transaction, if from_account not exist`() {
-        every { accountService.getAccount(ACCOUNT_1.id) } throws WalletException("")
+        coEvery { accountService.getAccount(ACCOUNT_1.id) } throws WalletException("")
 
         assertThrows<WalletException> {
             runBlocking { transferService.transfer(TRANSFER) }
@@ -71,7 +71,7 @@ class TransferServiceTest {
 
     @Test
     fun `'transfer' should't create transaction, if to_account not exist`() {
-        every { accountService.getAccount(ACCOUNT_2.id) } throws WalletException("")
+        coEvery { accountService.getAccount(ACCOUNT_2.id) } throws WalletException("")
 
         assertThrows<WalletException> {
             runBlocking { transferService.transfer(TRANSFER) }
@@ -107,12 +107,14 @@ class TransferServiceTest {
         private val ACCOUNT_1 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(10),
-            locked = false
+            locked = false,
+            lockTransactionId = null
         )
         private val ACCOUNT_2 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(5),
-            locked = false
+            locked = false,
+            lockTransactionId = null
         )
         private val TRANSACTION = Transaction(
             id = UUID.randomUUID(),

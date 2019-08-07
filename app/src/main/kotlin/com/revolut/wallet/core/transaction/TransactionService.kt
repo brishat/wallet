@@ -8,14 +8,14 @@ import java.math.BigDecimal
 import java.util.UUID
 import mu.KLogging
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.transaction
 import org.jetbrains.exposed.sql.update
 
 class TransactionService(
     private val accountService: AccountService
 ) {
 
-    fun createTransaction(transfer: TransferDto): Transaction = transaction {
+    suspend fun createTransaction(transfer: TransferDto): Transaction = transaction {
         TransactionTable.insert {
             it[id] = UUID.randomUUID()
             it[fromAccountId] = transfer.fromId
@@ -27,7 +27,7 @@ class TransactionService(
             ?: throw WalletException("Error on create transaction")
     }
 
-    fun createCreditTransactionLog(transaction: Transaction, fromAccount: Account): Unit = transaction {
+    suspend fun createCreditTransactionLog(transaction: Transaction, fromAccount: Account): Unit = transaction {
         accountService.credit(fromAccount, transaction)
 
         TransactionLogTable.insert {
@@ -36,9 +36,10 @@ class TransactionService(
             it[debit] = BigDecimal.ZERO
             it[credit] = transaction.amount
         }
+        Unit
     }
 
-    fun createDebitTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
+    suspend fun createDebitTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
         accountService.debit(toAccount, transaction)
 
         TransactionLogTable.insert {
@@ -51,14 +52,16 @@ class TransactionService(
         TransactionTable.update({ TransactionTable.id eq transaction.id }) {
             it[status] = TransactionStatus.FINISHED
         }
+        Unit
     }
 
-    fun createRollbackTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
+    suspend fun createRollbackTransactionLog(transaction: Transaction, toAccount: Account): Unit = transaction {
         accountService.debit(toAccount, transaction)
 
         TransactionTable.update({ TransactionTable.id eq transaction.id }) {
             it[status] = TransactionStatus.RETURNED
         }
+        Unit
     }
 
     companion object : KLogging()

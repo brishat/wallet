@@ -33,79 +33,81 @@ class TransactionProcessorTest {
 
     @BeforeEach
     fun beforeEach() {
-        every { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1
-        every { accountService.getAccount(ACCOUNT_2.id) } returns ACCOUNT_2
+        coEvery { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1
+        coEvery { accountService.getAccount(ACCOUNT_2.id) } returns ACCOUNT_2
 
-        every { accountService.lockAccount(any()) } just Runs
-        every { accountService.unlockAccount(any()) } just Runs
+        coEvery { accountService.lockAccount(any(), any()) } just Runs
+        coEvery { accountService.unlockAccount(any(), any()) } just Runs
     }
 
     @Test
     fun `'creditFromAccount' should take money from account`() {
-        every { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) } just Runs
+        coEvery { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) } just Runs
 
         runBlocking { transactionProcessor.creditFromAccount(TRANSACTION) }
 
-        verify { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
-        verify { accountService.unlockAccount(ACCOUNT_1.id) }
+        coVerify { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
+        coVerify { accountService.unlockAccount(ACCOUNT_1.id, TRANSACTION.id) }
     }
 
     @Test
     fun `'creditFromAccount' shouldn't take money from account, if balance not enough`() {
-        every { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1.copy(balance = BigDecimal.ZERO)
+        coEvery { accountService.getAccount(ACCOUNT_1.id) } returns ACCOUNT_1.copy(balance = BigDecimal.ZERO)
 
         assertThrows<WalletException> {
             runBlocking { transactionProcessor.creditFromAccount(TRANSACTION) }
         }
 
-        verify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
-        verify { accountService.unlockAccount(ACCOUNT_1.id) }
+        coVerify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
+        coVerify { accountService.unlockAccount(ACCOUNT_1.id, TRANSACTION.id) }
     }
 
     @Test
     fun `'creditFromAccount' shouldn't take money from account, if can not lock`() {
-        every { accountService.lockAccount(ACCOUNT_1.id) } throws WalletException("")
+        coEvery { accountService.lockAccount(ACCOUNT_1.id, TRANSACTION.id) } throws WalletException("")
 
         assertThrows<WalletException> {
             runBlocking { transactionProcessor.creditFromAccount(TRANSACTION) }
         }
 
-        verify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
-        verify(inverse = true) { accountService.unlockAccount(ACCOUNT_1.id) }
+        coVerify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_1) }
+        coVerify(inverse = true) { accountService.unlockAccount(ACCOUNT_1.id, TRANSACTION.id) }
     }
 
     @Test
     fun `'debitToAccount' should put money to account`() {
-        every { transactionService.createDebitTransactionLog(TRANSACTION, ACCOUNT_2) } just Runs
+        coEvery { transactionService.createDebitTransactionLog(TRANSACTION, ACCOUNT_2) } just Runs
 
         runBlocking { transactionProcessor.debitToAccount(TRANSACTION) }
 
-        verify { transactionService.createDebitTransactionLog(TRANSACTION, ACCOUNT_2) }
-        verify { accountService.unlockAccount(ACCOUNT_2.id) }
+        coVerify { transactionService.createDebitTransactionLog(TRANSACTION, ACCOUNT_2) }
+        coVerify { accountService.unlockAccount(ACCOUNT_2.id, TRANSACTION.id) }
     }
 
     @Test
     fun `'debitToAccount' should rollback money, if can not lock`() {
-        every { accountService.lockAccount(ACCOUNT_2.id) } throws WalletException("")
+        coEvery { accountService.lockAccount(ACCOUNT_2.id, TRANSACTION.id) } throws WalletException("")
         coEvery { transactionService.createRollbackTransactionLog(TRANSACTION, ACCOUNT_1) } just runs
 
         runBlocking { transactionProcessor.debitToAccount(TRANSACTION) }
 
         coVerify { transactionService.createRollbackTransactionLog(TRANSACTION, ACCOUNT_1) }
-        verify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_2) }
-        verify(inverse = true) { accountService.unlockAccount(ACCOUNT_2.id) }
+        coVerify(inverse = true) { transactionService.createCreditTransactionLog(TRANSACTION, ACCOUNT_2) }
+        coVerify(inverse = true) { accountService.unlockAccount(ACCOUNT_2.id, TRANSACTION.id) }
     }
 
     companion object {
         private val ACCOUNT_1 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(10),
-            locked = false
+            locked = false,
+            lockTransactionId = null
         )
         private val ACCOUNT_2 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(5),
-            locked = false
+            locked = false,
+            lockTransactionId = null
         )
         private val TRANSACTION = Transaction(
             id = UUID.randomUUID(),

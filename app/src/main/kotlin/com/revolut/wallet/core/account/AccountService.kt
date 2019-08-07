@@ -8,12 +8,12 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.transaction
 import org.jetbrains.exposed.sql.update
 
 class AccountService {
 
-    fun createAccount(initialBalance: BigDecimal): Account = transaction {
+    suspend fun createAccount(initialBalance: BigDecimal): Account = transaction {
         val result = AccountTable.insert {
             it[id] = UUID.randomUUID()
             it[balance] = initialBalance
@@ -23,33 +23,38 @@ class AccountService {
             ?: throw WalletException("Error on create account")
     }
 
-    fun getAccount(id: UUID): Account = transaction {
+    suspend fun getAccount(id: UUID): Account = transaction {
         return@transaction AccountTable.select { AccountTable.id eq id }.firstOrNull()?.toAccount()
             ?: throw WalletException("Account not found")
     }
 
-    fun getAccountList(): List<Account> = transaction {
+    suspend fun getAccountList(): List<Account> = transaction {
         return@transaction AccountTable.selectAll().map { it.toAccount() }
     }
 
-    fun lockAccount(accountId: UUID) = transaction {
+    suspend fun lockAccount(accountId: UUID, transactionId: UUID) = transaction {
         val result = AccountTable.update({
             AccountTable.id eq accountId and
-                (AccountTable.locked eq false)
+                (AccountTable.locked eq false) and
+                (AccountTable.lockTransactionId.isNull())
         }) {
             it[locked] = true
+            it[lockTransactionId] = transactionId
         }
 
         if (result == 0) throw WalletException("Can not lock account")
     }
 
-    fun unlockAccount(accountId: UUID): Unit = transaction {
+    suspend fun unlockAccount(accountId: UUID, transactionId: UUID): Unit = transaction {
         AccountTable.update({
             AccountTable.id eq accountId and
-                (AccountTable.locked eq true)
+                (AccountTable.locked eq true) and
+                (AccountTable.lockTransactionId eq transactionId)
         }) {
             it[locked] = false
+            it[lockTransactionId] = null
         }
+        Unit
     }
 
     fun credit(account: Account, transaction: Transaction) {
