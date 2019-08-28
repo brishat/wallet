@@ -10,12 +10,12 @@ import com.revolut.wallet.exception.WalletException
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.every
 import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.just
 import kotlinx.coroutines.runBlocking
+import org.joda.time.DateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -107,14 +107,12 @@ class TransferServiceTest {
         private val ACCOUNT_1 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(10),
-            locked = false,
-            lockTransactionId = null
+            version = DateTime.now()
         )
         private val ACCOUNT_2 = Account(
             id = UUID.randomUUID(),
             balance = BigDecimal.valueOf(5),
-            locked = false,
-            lockTransactionId = null
+            version = DateTime.now()
         )
         private val TRANSACTION = Transaction(
             id = UUID.randomUUID(),

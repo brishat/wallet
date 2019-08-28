@@ -2,10 +2,10 @@ package com.revolut.wallet.core.transaction
 
 import com.revolut.wallet.core.account.Account
 import com.revolut.wallet.core.account.AccountService
+import com.revolut.wallet.exception.OptmisticLockException
 import com.revolut.wallet.exception.WalletException
 import kotlinx.coroutines.GlobalScope
 import java.math.BigDecimal
-import java.util.UUID
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mu.KLogging
@@ -17,72 +17,56 @@ class TransactionProcessor(
 
     suspend fun creditFromAccount(transaction: Transaction) {
         logger.info { "Create credit transaction log: $transaction" }
-        lockAccount(transaction.fromAccountId, transaction.id)
 
-        try {
+        retry(ATTEMPT_MAX) {
             val fromAccount = accountService.getAccount(transaction.fromAccountId)
             fromAccount.checkIsBalanceEnough(transaction.amount)
-
             transactionService.createCreditTransactionLog(transaction, fromAccount)
-        } finally {
-            accountService.unlockAccount(transaction.fromAccountId, transaction.id)
         }
     }
 
     suspend fun debitToAccount(transaction: Transaction) {
         logger.info { "Create debit transaction log: $transaction" }
-        val locked = try {
-            lockAccount(transaction.toAccountId, transaction.id)
-            true
+
+        try {
+            retry(ATTEMPT_MAX) {
+                val toAccount = accountService.getAccount(transaction.toAccountId)
+                transactionService.createDebitTransactionLog(transaction, toAccount)
+            }
         } catch (e: Exception) {
             GlobalScope.launch { rollbackToAccount(transaction) }
-            false
-        }
-        if (!locked) return
-        try {
-            val toAccount = accountService.getAccount(transaction.toAccountId)
-            transactionService.createDebitTransactionLog(transaction, toAccount)
-        } finally {
-            accountService.unlockAccount(transaction.toAccountId, transaction.id)
         }
     }
 
     suspend fun rollbackToAccount(transaction: Transaction) {
         logger.info { "Create rollback transaction log: $transaction" }
-        var locked = false
-        while (!locked) {
-            try {
-                lockAccount(transaction.fromAccountId, transaction.id)
-                locked = true
-            } catch (e: Exception) {
-            }
-        }
-        try {
+        retry {
             val fromAccount = accountService.getAccount(transaction.fromAccountId)
             transactionService.createRollbackTransactionLog(transaction, fromAccount)
-        } finally {
-            accountService.unlockAccount(transaction.fromAccountId, transaction.id)
         }
     }
 
-    private fun Account.checkIsBalanceEnough(amount: BigDecimal) {
-        if (this.balance < amount) throw WalletException("Account has not enough on balance")
-    }
-
-    private suspend fun lockAccount(accountId: UUID, transactionId: UUID) {
+    private suspend fun retry(
+        attemptsCount: Int = 0,
+        job: suspend () -> Unit
+    ) {
         var attempt = 0
-        var isLocked = false
-        while (!isLocked && attempt < ATTEMPT_MAX) {
+        var isProcessed = false
+        while (!isProcessed && (attempt < attemptsCount || attemptsCount == 0)) {
             try {
-                accountService.lockAccount(accountId, transactionId)
-                isLocked = true
-            } catch (e: WalletException) {
-                logger.info { "Retry lock account: $accountId" }
+                job()
+                isProcessed = true
+            } catch (e: OptmisticLockException) {
+                logger.info { "Retry account operation" }
                 delay(1000)
                 attempt++
             }
         }
-        if (!isLocked) throw WalletException("Can not lock account")
+        if (!isProcessed) throw WalletException("Can not process operation")
+    }
+
+    private fun Account.checkIsBalanceEnough(amount: BigDecimal) {
+        if (this.balance < amount) throw WalletException("Account has not enough on balance")
     }
 
     companion object : KLogging() {
